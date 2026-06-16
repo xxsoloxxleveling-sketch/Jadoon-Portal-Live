@@ -9,6 +9,7 @@ import Students from './views/Students';
 import ClassManager from './views/ClassManager';
 import Teachers from './views/Teachers';
 import Employees from './views/Employees';
+import Payroll from './views/Payroll';
 import Settings from './views/Settings';
 import { useAuthStore } from './store/useStore';
 
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
       { path: 'fees', element: <FeeChallan /> },
       { path: 'teachers', element: <Teachers /> },
       { path: 'employees', element: <Employees /> },
+      { path: 'payroll', element: <Payroll /> },
       { path: 'settings', element: <Settings /> },
     ]
   }
