@@ -9,7 +9,7 @@ export const createStudent = async (req: Request, res: Response): Promise<any> =
   try {
     const { 
       email, password, first_name, last_name, 
-      dob, gender, guardian_name, guardian_phone, address,
+      dob, gender, blood_group, guardian_name, guardian_phone, address,
       is_orphan, is_needy, sibling_ids 
     } = req.body;
     
@@ -33,6 +33,7 @@ export const createStudent = async (req: Request, res: Response): Promise<any> =
         admission_number, first_name, last_name,
         dob: dob ? new Date(dob) : null,
         gender: gender || null,
+        blood_group: blood_group || null,
         guardian_name: guardian_name ? encrypt(guardian_name) : null,
         guardian_phone: guardian_phone ? encrypt(guardian_phone) : null,
         address: address || null,
@@ -154,9 +155,9 @@ export const enrollBatch = async (req: Request, res: Response) => {
 export const updateStudent = async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
-    const { first_name, last_name, dob, gender, guardian_name, guardian_phone, address, admission_number, is_orphan, is_needy, sibling_ids } = req.body;
+    const { first_name, last_name, dob, gender, blood_group, guardian_name, guardian_phone, address, admission_number, is_orphan, is_needy, sibling_ids } = req.body;
     
-    const updateData: any = { first_name, last_name, gender, address, admission_number };
+    const updateData: any = { first_name, last_name, gender, blood_group, address, admission_number };
     if (dob) updateData.dob = new Date(dob);
     if (typeof is_orphan === 'boolean') updateData.is_orphan = is_orphan;
     if (typeof is_needy === 'boolean') updateData.is_needy = is_needy;

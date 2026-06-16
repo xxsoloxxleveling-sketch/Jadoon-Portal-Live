@@ -53,21 +53,15 @@ const DraggableStudent: React.FC<{ student: StudentData }> = ({ student }) => {
 const DroppableBucket = ({ 
   enrolledStudents, 
   existingStudents,
-  capacity,
   targetClass
 }: { 
   enrolledStudents: StudentData[], 
   existingStudents: StudentData[],
-  capacity: number,
   targetClass: ClassData | null
 }) => {
   const { setNodeRef, isOver } = useDroppable({ id: 'class_bucket' });
 
   const currentCount = targetClass ? existingStudents.length + enrolledStudents.length : existingStudents.length + enrolledStudents.length;
-  const progress = (currentCount / capacity) * 100;
-  const radius = 35;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (Math.min(progress, 100) / 100) * circumference;
 
   return (
     <div
@@ -81,28 +75,7 @@ const DroppableBucket = ({
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">
             {targetClass ? targetClass.name : 'Select a Class'}
           </h2>
-          <p className="text-slate-500 font-medium text-sm mt-1">Target Bucket</p>
-        </div>
-        
-        {/* SVG Progress Ring */}
-        <div className="relative w-20 h-20 flex items-center justify-center">
-          <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r={radius} fill="none" stroke="#F1F5F9" strokeWidth="8" />
-            <motion.circle 
-              cx="50" cy="50" r={radius} fill="none" 
-              stroke={targetClass ? "var(--color-primary)" : "#E2E8F0"} 
-              strokeWidth="8" 
-              strokeLinecap="round"
-              initial={{ strokeDashoffset: circumference }}
-              animate={{ strokeDashoffset: offset }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              style={{ strokeDasharray: circumference }}
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center flex-col">
-            <span className="text-sm font-bold text-slate-900">{currentCount}</span>
-            <span className="text-[10px] text-slate-500 font-bold">/{capacity}</span>
-          </div>
+          <p className="text-slate-500 font-medium text-sm mt-1">Target Bucket ({currentCount} students)</p>
         </div>
       </div>
 
@@ -179,7 +152,6 @@ export default function ClassManager() {
   const [saving, setSaving] = useState(false);
   const token = useAuthStore((state) => state.token);
 
-  const CAPACITY = 35;
   const targetClass = classes.find(c => c.id === selectedClassId) || null;
 
   useEffect(() => {
@@ -243,8 +215,6 @@ export default function ClassManager() {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && over.id === 'class_bucket' && targetClass) {
-      const currentCount = existingStudents.length + enrolled.length;
-      if (currentCount >= CAPACITY) return alert("Class is at full capacity!");
 
       const student = unassigned.find(s => s.id === active.id);
       if (student) {
@@ -342,12 +312,9 @@ export default function ClassManager() {
             >
               <div className="flex items-center justify-between space-x-4 mb-2">
                 <span className={`font-bold text-base ${selectedClassId === c.id ? 'text-[var(--color-primary)]' : 'text-slate-700'}`}>{c.name}</span>
-                <span className={`px-2 py-1 rounded-lg text-xs font-black tracking-wider ${c._count.students >= CAPACITY ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>
-                  {c._count.students}/{CAPACITY}
+                <span className="px-2 py-1 rounded-lg text-xs font-black tracking-wider bg-slate-100 text-slate-600">
+                  {c._count.students}
                 </span>
-              </div>
-              <div className="w-full bg-slate-200/50 rounded-full h-1.5 mt-1 overflow-hidden">
-                <div className="bg-[var(--color-primary)] h-1.5 rounded-full transition-all" style={{ width: `${Math.min((c._count.students / CAPACITY) * 100, 100)}%` }}></div>
               </div>
             </button>
           ))}
@@ -365,7 +332,7 @@ export default function ClassManager() {
             </div>
           </div>
 
-          <DroppableBucket enrolledStudents={enrolled} existingStudents={existingStudents} capacity={CAPACITY} targetClass={targetClass} />
+          <DroppableBucket enrolledStudents={enrolled} existingStudents={existingStudents} targetClass={targetClass} />
         </div>
       </DndContext>
     </div>

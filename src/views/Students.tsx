@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/src/components/ui/Card';
-import { Users, Loader2, X, FileText, CheckCircle2, ChevronRight, Activity, Calendar } from 'lucide-react';
+import { Users, Loader2, X, FileText, CheckCircle2, ChevronRight, Activity, Calendar, UploadCloud, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuthStore } from '../store/useStore';
 import { Dialog } from '@/src/components/ui/Dialog';
@@ -19,6 +19,7 @@ interface Student {
 interface ProfileDetails extends Student {
   fee_challans?: Array<{ id: string, amount_due: number, status: string, due_date: string }>;
   attendances?: Array<{ id: string, status: string, date: string }>;
+  documents?: Array<{ id: string, title: string, url: string }>;
 }
 
 export default function Students() {
@@ -27,6 +28,7 @@ export default function Students() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [filterType, setFilterType] = useState<string>('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
   const [deleteDialogConfig, setDeleteDialogConfig] = useState<{isOpen: boolean, studentId: string | null}>({isOpen: false, studentId: null});
   const role = useAuthStore((state) => state.role);
 
@@ -125,14 +127,41 @@ export default function Students() {
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const fd = new FormData(e.target as HTMLFormElement);
-    addMutation.mutate(Object.fromEntries(fd.entries()));
+    const data = Object.fromEntries(fd.entries());
+    if (data.sibling_ids) {
+      data.sibling_ids = (data.sibling_ids as string).split(',').map(s => s.trim()).filter(Boolean) as any;
+    }
+    addMutation.mutate(data);
   };
 
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
     const fd = new FormData(e.target as HTMLFormElement);
-    editMutation.mutate(Object.fromEntries(fd.entries()));
+    const data = Object.fromEntries(fd.entries());
+    if (data.sibling_ids) {
+      data.sibling_ids = (data.sibling_ids as string).split(',').map(s => s.trim()).filter(Boolean) as any;
+    }
+    editMutation.mutate(data);
+  };
+
+  const handleUploadDoc = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!activeStudentId || !e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('student_id', activeStudentId);
+    fd.append('title', file.name);
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/documents/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: fd
+      });
+      if (res.ok) queryClient.invalidateQueries({ queryKey: ['student', activeStudentId] });
+      else alert('Failed to upload document');
+    } catch (err) {}
   };
 
   const handleDeleteClick = (id: string) => {
@@ -180,6 +209,16 @@ export default function Students() {
             <p className="text-slate-500 mt-1 font-medium">Select a student row to view customized contextual profiles</p>
           </div>
           <div className="flex items-center space-x-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Search name or ID..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+              />
+            </div>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
@@ -213,7 +252,13 @@ export default function Students() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {students.map((student, index) => (
+                  {students.filter((s: any) => {
+                    if (!searchTerm) return true;
+                    const q = searchTerm.toLowerCase();
+                    return s.first_name.toLowerCase().includes(q) || 
+                           s.last_name.toLowerCase().includes(q) || 
+                           (s.admission_number && s.admission_number.toLowerCase().includes(q));
+                  }).map((student: any, index: number) => (
                     <motion.tr 
                       key={student.id}
                       initial={{ opacity: 0, y: 10 }}
@@ -283,6 +328,23 @@ export default function Students() {
                    </div>
                  </div>
 
+                 {/* Document Storage */}
+                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="text-sm font-bold text-slate-700 flex items-center"><FileText size={16} className="mr-2"/> Documents</h4>
+                      <label className="cursor-pointer text-xs font-bold text-[var(--color-primary)] hover:underline flex items-center">
+                        <UploadCloud size={14} className="mr-1"/> Upload
+                        <input type="file" className="hidden" onChange={handleUploadDoc} />
+                      </label>
+                    </div>
+                    {profile.documents && profile.documents.length > 0 ? profile.documents.map(doc => (
+                      <div key={doc.id} className="flex justify-between items-center text-sm py-2 border-b border-slate-200 last:border-0">
+                        <span className="truncate flex-1 font-medium">{doc.title}</span>
+                        <a href={doc.url} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs font-bold">View</a>
+                      </div>
+                    )) : <p className="text-xs text-slate-400 font-medium italic">No documents uploaded.</p>}
+                 </div>
+
                  {/* Role-Based Rendering Sections */}
                  {(role === 'SUPER_ADMIN' || role === 'ADMIN') && (
                    <div className="space-y-4">
@@ -335,13 +397,19 @@ export default function Students() {
                 <input name="last_name" type="text" placeholder="Last Name" required className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
               </div>
               <input name="admission_number" type="text" placeholder="Admission Number (Optional)" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
-              <input name="dob" type="date" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
-              <select name="gender" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none">
-                <option value="">Select Gender (Optional)</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
+              <div className="grid grid-cols-2 gap-4">
+                <input name="dob" type="date" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
+                <select name="gender" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none">
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <input name="blood_group" type="text" placeholder="Blood Group" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
+                <input name="sibling_ids" type="text" placeholder="Sibling IDs (Comma sep)" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
+              </div>
               <input name="guardian_name" type="text" placeholder="Guardian Name" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
               <input name="guardian_phone" type="text" placeholder="Guardian Phone" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
               <textarea name="address" placeholder="Address" className="w-full h-24 p-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none resize-none"></textarea>
@@ -374,13 +442,19 @@ export default function Students() {
                 <input name="last_name" defaultValue={profile.last_name} type="text" placeholder="Last Name" required className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
               </div>
               <input name="admission_number" defaultValue={profile.admission_number} type="text" placeholder="Admission Number (Optional)" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
-              <input name="dob" defaultValue={profile.dob ? profile.dob.substring(0, 10) : ''} type="date" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
-              <select name="gender" defaultValue={profile.gender || ''} className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none">
-                <option value="">Select Gender (Optional)</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
+              <div className="grid grid-cols-2 gap-4">
+                <input name="dob" defaultValue={profile.dob ? profile.dob.substring(0, 10) : ''} type="date" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
+                <select name="gender" defaultValue={profile.gender || ''} className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none">
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <input name="blood_group" defaultValue={(profile as any).blood_group || ''} type="text" placeholder="Blood Group" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
+                <input name="sibling_ids" defaultValue={((profile as any).sibling_ids || []).join(', ')} type="text" placeholder="Sibling IDs (Comma sep)" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
+              </div>
               <input name="guardian_name" defaultValue={profile.guardian_name || ''} type="text" placeholder="Guardian Name" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
               <input name="guardian_phone" defaultValue={profile.guardian_phone || ''} type="text" placeholder="Guardian Phone" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
               <textarea name="address" defaultValue={(profile as any).address || ''} placeholder="Address" className="w-full h-24 p-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none resize-none"></textarea>

@@ -42,7 +42,8 @@ export const getAllTeachers = async (req: Request, res: Response) => {
     const teachers = await prisma.teacher.findMany({
       include: {
         user: { select: { email: true, role: true } },
-        subjects: true
+        subjects: true,
+        documents: true
       },
       orderBy: { employee_id: 'asc' }
     });
@@ -60,7 +61,8 @@ export const getAllTeachers = async (req: Request, res: Response) => {
       email: t.user.email,
       qualifications: t.qualifications,
       hire_date: t.hire_date,
-      role: t.user.role
+      role: t.user.role,
+      documents: t.documents
     }));
     
     res.json(formatted);

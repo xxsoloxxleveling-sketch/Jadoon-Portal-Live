@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mail, Briefcase, Calendar, ShieldCheck, Loader2, X, Plus, UserPlus, Fingerprint, Clock } from 'lucide-react';
+import { Mail, Briefcase, Calendar, ShieldCheck, Loader2, X, Plus, UserPlus, Fingerprint, Clock, FileText, UploadCloud } from 'lucide-react';
 import { useAuthStore } from '../store/useStore';
 import { Dialog } from '@/src/components/ui/Dialog';
 
@@ -17,6 +17,7 @@ interface TeacherData {
   qualifications: string;
   hire_date: string;
   role: string;
+  documents?: Array<{ id: string, title: string, url: string }>;
 }
 
 interface AttendanceData {
@@ -132,6 +133,25 @@ export default function Teachers() {
     } finally {
       setDeleteDialogConfig({isOpen: false, teacherId: null});
     }
+  };
+
+  const handleUploadDoc = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!activeTeacherId || !e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('teacher_id', activeTeacherId);
+    fd.append('title', file.name);
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/documents/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: fd
+      });
+      if (res.ok) fetchTeachers();
+      else alert('Failed to upload document');
+    } catch (err) {}
   };
 
   const handleMarkAttendance = async () => {
@@ -254,6 +274,23 @@ export default function Teachers() {
                     {activeTeacher.address && <div className="flex items-center text-sm"><span className="font-semibold text-slate-600 mr-2">Address:</span> <span className="font-semibold">{activeTeacher.address}</span></div>}
                     <div className="flex items-center text-sm"><ShieldCheck size={16} className="text-emerald-500 mr-3" /> <span className="font-semibold">{activeTeacher.qualifications || 'N/A'}</span></div>
                     <div className="flex items-center text-sm"><Calendar size={16} className="text-amber-500 mr-3" /> <span className="font-semibold">Joined {activeTeacher.hire_date ? new Date(activeTeacher.hire_date).toLocaleDateString() : 'N/A'}</span></div>
+                 </div>
+
+                 {/* Document Storage */}
+                 <div className="p-4 bg-slate-50 rounded-2xl space-y-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="text-sm font-bold text-slate-700 flex items-center"><FileText size={16} className="mr-2"/> Documents</h4>
+                      <label className="cursor-pointer text-xs font-bold text-[var(--color-primary)] hover:underline flex items-center">
+                        <UploadCloud size={14} className="mr-1"/> Upload
+                        <input type="file" className="hidden" onChange={handleUploadDoc} />
+                      </label>
+                    </div>
+                    {activeTeacher.documents && activeTeacher.documents.length > 0 ? activeTeacher.documents.map(doc => (
+                      <div key={doc.id} className="flex justify-between items-center text-sm py-2 border-b border-slate-200 last:border-0">
+                        <span className="truncate flex-1 font-medium">{doc.title}</span>
+                        <a href={doc.url} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs font-bold">View</a>
+                      </div>
+                    )) : <p className="text-xs text-slate-400 font-medium italic">No documents uploaded.</p>}
                  </div>
               </div>
             </div>

@@ -112,8 +112,8 @@ export const downloadChallanPDF = async (req: Request, res: Response) => {
 
   if (!challan) return res.status(404).json({ error: 'Challan not found' });
 
-  // A4 Landscape is 841.89 x 595.28 points
-  const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 0 });
+  // A4 Portrait is 595.28 x 841.89 points
+  const doc = new PDFDocument({ size: 'A4', layout: 'portrait', margin: 0 });
   const fileName = `${challan.student.first_name}_${challan.student.last_name}_${challan.month}_${challan.year}.pdf`;
   res.setHeader('Content-disposition', `attachment; filename="${fileName}"`);
   res.setHeader('Content-type', 'application/pdf');
@@ -121,165 +121,158 @@ export const downloadChallanPDF = async (req: Request, res: Response) => {
 
   const guardName = decrypt(challan.student.guardian_name);
 
-    const drawSlice = (xOffset: number, copyType: string) => {
-      const pd = 15;
-      const startX = xOffset + pd;
-      const startY = 30; 
-      const sliceWidth = 280 - (pd * 2);
+    const drawSlice = (yOffset: number, copyType: string) => {
+      const marginX = 30;
+      const sliceWidth = 595.28 - (marginX * 2);
+      const startY = yOffset + 15;
   
+      // Header Section
       try {
         if (logoBase64) {
           const logoBuffer = Buffer.from(logoBase64, 'base64');
-          doc.image(logoBuffer, startX + (sliceWidth/2) - 40, startY - 15, { width: 80 });
+          doc.image(logoBuffer, marginX, startY, { width: 50 }); // Prominent Logo
         }
       } catch(e) {
         logger.error({ error: e }, "Logo Error");
       }
   
-      doc.fontSize(12).font('Helvetica-Bold')
-         .text('JADOON PUBLIC SCHOOL & COLLEGE', startX, startY + 65, { width: sliceWidth, align: 'center' });
+      doc.fontSize(14).font('Helvetica-Bold')
+         .text('JADOON PUBLIC SCHOOL & COLLEGE', marginX + 65, startY + 5, { width: sliceWidth - 65, align: 'left' });
       
-      doc.fontSize(9).font('Helvetica-Bold')
-         .text('FAYSAL BANK', startX, startY + 80, { width: sliceWidth, align: 'center' });
-  
-      doc.fontSize(11).font('Helvetica-Bold')
-         .text(copyType, startX, startY + 95, { width: sliceWidth, align: 'center' });
+      doc.fontSize(10).font('Helvetica-Bold').fillColor('#475569')
+         .text('FAYSAL BANK', marginX + 65, startY + 22, { width: sliceWidth - 65, align: 'left' });
+         
+      doc.fontSize(10).font('Helvetica-Bold').fillColor('#000000')
+         .text(copyType, marginX + 65, startY + 35, { width: sliceWidth - 65, align: 'left' });
+         
+      // Challan ID Box (Right aligned)
+      doc.roundedRect(marginX + sliceWidth - 140, startY + 5, 140, 30, 4).lineWidth(1).stroke('#CBD5E1');
+      doc.fontSize(8).font('Helvetica').fillColor('#64748B').text('CHALLAN NO', marginX + sliceWidth - 140, startY + 10, { width: 140, align: 'center' });
+      doc.fontSize(12).font('Helvetica-Bold').fillColor('#0F172A').text(challan.id.slice(-10).toUpperCase(), marginX + sliceWidth - 140, startY + 20, { width: 140, align: 'center', characterSpacing: 1 });
+
+      let curY = startY + 60;
       
-      doc.rect(startX, startY + 110, sliceWidth, 22).stroke();
-      doc.fontSize(11).font('Helvetica-Bold').text(challan.id.slice(-10).toUpperCase(), startX, startY + 116, { width: sliceWidth, align: 'center', characterSpacing: 2 });
+      // Student Details Section (2 columns)
+      doc.roundedRect(marginX, curY, sliceWidth, 45, 4).fillColor('#F8FAFC').fill();
+      doc.strokeColor('#E2E8F0').lineWidth(1).roundedRect(marginX, curY, sliceWidth, 45, 4).stroke();
+      
+      const col1X = marginX + 10;
+      const col2X = marginX + (sliceWidth / 2) + 10;
+      
+      doc.fillColor('#0F172A');
+      doc.fontSize(9).font('Helvetica-Bold').text('Name:', col1X, curY + 8);
+      doc.fontSize(9).font('Helvetica').text(challan.student.first_name + ' ' + challan.student.last_name, col1X + 45, curY + 8);
+      
+      doc.font('Helvetica-Bold').text('F. Name:', col1X, curY + 25);
+      doc.font('Helvetica').text(guardName, col1X + 45, curY + 25);
+      
+      doc.font('Helvetica-Bold').text('Reg No:', col2X, curY + 8);
+      doc.font('Helvetica').text(challan.student.admission_number, col2X + 45, curY + 8);
+      
+      doc.font('Helvetica-Bold').text('Class:', col2X + 110, curY + 8);
+      doc.font('Helvetica').text(challan.student.class?.name || 'N/A', col2X + 145, curY + 8);
+      
+      doc.font('Helvetica-Bold').text('Issue Date:', col2X, curY + 25);
+      doc.font('Helvetica').text(new Date().toLocaleDateString('en-GB'), col2X + 60, curY + 25);
+      
+      doc.font('Helvetica-Bold').text('Due Date:', col2X + 130, curY + 25);
+      doc.font('Helvetica').fillColor('#E11D48').text(new Date(challan.due_date).toLocaleDateString('en-GB'), col2X + 180, curY + 25);
+      
+      curY += 55;
+      
+      // Fee Details Table Header
+      doc.fillColor('#0F172A');
+      doc.roundedRect(marginX, curY, sliceWidth, 20, 4).fillColor('#E2E8F0').fill();
+      doc.fillColor('#0F172A').fontSize(9).font('Helvetica-Bold');
+      doc.text('Sr. No.', marginX + 10, curY + 6);
+      doc.text('Fee Head', marginX + 60, curY + 6);
+      doc.text('Amount (Rs)', marginX + sliceWidth - 80, curY + 6, {width: 70, align: 'right'});
+      
+      curY += 20;
+      
+      // Fee Details Table Body
+      let rowCount = 1;
+      let totalOtherCustom = 0;
+      const cf = challan.custom_fields || [];
+      
+      const drawTableRow = (desc: string, amount: number) => {
+        doc.fontSize(9).font('Helvetica').fillColor('#334155');
+        doc.text(rowCount.toString(), marginX + 15, curY + 5);
+        doc.text(desc, marginX + 60, curY + 5);
+        doc.text(amount.toString(), marginX + sliceWidth - 80, curY + 5, {width: 70, align: 'right'});
+        doc.strokeColor('#F1F5F9').moveTo(marginX, curY + 18).lineTo(marginX + sliceWidth, curY + 18).stroke();
+        curY += 18;
+        rowCount++;
+      };
 
-    let curY = startY + 140;
-    doc.fontSize(9).font('Helvetica-Bold').text('Name', startX, curY);
-    doc.fontSize(9).font('Helvetica').text(challan.student.first_name + ' ' + challan.student.last_name, startX + 50, curY);
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const monthStr = `${months[challan.month - 1]} ${challan.year}`;
+      drawTableRow(`Monthly Tuition Fee (${monthStr})`, challan.amount_due);
+      
+      const findAmount = (name: string) => Number(cf.find((f: any) => f.name.toLowerCase() === name.toLowerCase() || f.name.toLowerCase() === name.toLowerCase().replace('.', ''))?.amount) || 0;
+      const fineVal = findAmount('fine');
+      const discountVal = findAmount('discount');
+      const prevBalVal = findAmount('prev. bal');
+      const structuralNames = ['fine', 'discount', 'prev. bal', 'prev bal'];
+      const otherCustomFields = cf.filter((f: any) => !structuralNames.includes(f.name.toLowerCase()));
 
-    curY += 15;
-    doc.font('Helvetica-Bold').text('F. Name', startX, curY);
-    doc.font('Helvetica').text(guardName, startX + 50, curY);
+      otherCustomFields.forEach((field: any) => {
+        drawTableRow(field.name, Number(field.amount));
+        totalOtherCustom += Number(field.amount);
+      });
+      
+      // Draw outer border for table body
+      const tableHeight = (rowCount - 1) * 18;
+      doc.strokeColor('#E2E8F0').lineWidth(1).rect(marginX, curY - tableHeight, sliceWidth, tableHeight).stroke();
+      
+      // Totals Box
+      const grossTotal = challan.amount_due + totalOtherCustom;
+      const netBal = grossTotal + fineVal + prevBalVal - discountVal - challan.amount_paid;
+      
+      curY += 2;
+      doc.roundedRect(marginX, curY, sliceWidth, 36, 4).fillColor('#F8FAFC').fill();
+      doc.strokeColor('#E2E8F0').roundedRect(marginX, curY, sliceWidth, 36, 4).stroke();
+      
+      const statW = sliceWidth / 5;
+      const drawStat = (label: string, val: number, x: number, isTotal: boolean = false) => {
+        doc.fontSize(8).font('Helvetica').fillColor('#64748B').text(label, x, curY + 6, {width: statW, align: 'center'});
+        doc.fontSize(10).font('Helvetica-Bold').fillColor(isTotal ? '#0F172A' : '#334155').text(val.toString(), x, curY + 18, {width: statW, align: 'center'});
+      };
+      
+      drawStat('Fine', fineVal, marginX);
+      drawStat('Discount', discountVal, marginX + statW);
+      drawStat('Prev Bal', prevBalVal, marginX + statW * 2);
+      drawStat('Gross Total', grossTotal, marginX + statW * 3);
+      drawStat('Net Payable', netBal, marginX + statW * 4, true);
+      
+      for(let i=1; i<5; i++) {
+        doc.strokeColor('#E2E8F0').moveTo(marginX + (statW * i), curY + 5).lineTo(marginX + (statW * i), curY + 31).stroke();
+      }
 
-    curY += 15;
-    doc.font('Helvetica-Bold').text('Reg No', startX, curY);
-    doc.font('Helvetica').text(challan.student.admission_number, startX + 45, curY);
-    doc.font('Helvetica-Bold').text('GR No', startX + 115, curY);
-    doc.font('Helvetica').text(`DS-${challan.student.class?.name || 'N/A'}`, startX + 155, curY);
-
-    curY += 15;
-    doc.font('Helvetica-Bold').text('Issue Date', startX, curY);
-    doc.font('Helvetica').text(new Date().toLocaleDateString('en-GB'), startX + 55, curY);
-    doc.font('Helvetica-Bold').text('Due Date', startX + 115, curY);
-    doc.font('Helvetica').text(new Date(challan.due_date).toLocaleDateString('en-GB'), startX + 165, curY);
-
-    curY += 15;
-    doc.font('Helvetica-Bold').text('Class', startX, curY);
-    doc.font('Helvetica').text(challan.student.class?.name || 'N/A', startX + 50, curY);
-
-    curY += 15;
-    doc.font('Helvetica-Bold').text('Duration', startX, curY);
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    doc.font('Helvetica').text(`${months[challan.month - 1]} ${challan.year}`, startX + 50, curY);
-
-    curY += 20;
-    doc.rect(startX, curY, sliceWidth, 18).stroke();
-    doc.font('Helvetica-Bold').text('Sr. No.', startX + 2, curY + 5);
-    doc.text('Fee Head', startX + 35, curY + 5);
-    doc.text('Amount', startX + sliceWidth - 45, curY + 5, {width: 40, align: 'right'});
-
-    curY += 18;
-    doc.rect(startX, curY, sliceWidth, 18).stroke();
-    doc.font('Helvetica').text('1', startX + 5, curY + 5);
-    doc.text('1 x Study Fee', startX + 35, curY + 5);
-    doc.text(challan.amount_due.toString(), startX + sliceWidth - 45, curY + 5, {width: 40, align: 'right'});
-
-    let rowCount = 2;
-    let customY = curY;
-    let totalOtherCustom = 0;
-    const cf = challan.custom_fields || [];
-    
-    const findAmount = (name: string) => Number(cf.find((f: any) => f.name.toLowerCase() === name.toLowerCase() || f.name.toLowerCase() === name.toLowerCase().replace('.', ''))?.amount) || 0;
-    const fineVal = findAmount('fine');
-    const discountVal = findAmount('discount');
-    const prevBalVal = findAmount('prev. bal');
-    const structuralNames = ['fine', 'discount', 'prev. bal', 'prev bal'];
-    
-    const otherCustomFields = cf.filter((f: any) => !structuralNames.includes(f.name.toLowerCase()));
-
-    otherCustomFields.forEach((field: any) => {
-      customY += 18;
-      doc.rect(startX, customY, sliceWidth, 18).stroke();
-      doc.font('Helvetica').text(rowCount.toString(), startX + 5, customY + 5);
-      doc.text(field.name, startX + 35, customY + 5);
-      doc.text(field.amount.toString(), startX + sliceWidth - 45, customY + 5, {width: 40, align: 'right'});
-      totalOtherCustom += Number(field.amount);
-      rowCount++;
-    });
-    
-    curY = customY;
-
-    let rowY = curY - (18 * (rowCount - 1));
-    curY += 18;
-    doc.rect(startX, curY, sliceWidth, 18).stroke();
-    doc.font('Helvetica-Bold').text('Gross Total', startX + sliceWidth - 105, curY + 5);
-    
-    const grossTotal = challan.amount_due + totalOtherCustom;
-    doc.text(grossTotal.toString(), startX + sliceWidth - 45, curY + 5, {width: 40, align: 'right'});
-    
-    doc.moveTo(startX + Math.floor(sliceWidth) - 48, rowY + 18).lineTo(startX + Math.floor(sliceWidth) - 48, curY).stroke();
-    doc.moveTo(startX + 25, rowY + 18).lineTo(startX + 25, curY).stroke();
-
-    curY += 18;
-    doc.rect(startX, curY, sliceWidth, 18).stroke();
-    const colW = sliceWidth / 5;
-    doc.fontSize(7).text('Fine', startX, curY + 5, {width: colW, align: 'center'});
-    doc.text('Discount', startX + colW, curY + 5, {width: colW, align: 'center'});
-    doc.text('Prev Bal', startX + colW*2, curY + 5, {width: colW, align: 'center'});
-    doc.text('Paid', startX + colW*3, curY + 5, {width: colW, align: 'center'});
-    doc.text('Net Bal', startX + colW*4, curY + 5, {width: colW, align: 'center'});
-
-    const netBal = grossTotal + fineVal + prevBalVal - discountVal - challan.amount_paid;
-
-    curY += 18;
-    doc.rect(startX, curY, sliceWidth, 18).stroke();
-    doc.font('Helvetica').text(fineVal.toString(), startX, curY + 5, {width: colW, align: 'center'});
-    doc.text(discountVal.toString(), startX + colW, curY + 5, {width: colW, align: 'center'});
-    doc.text(prevBalVal.toString(), startX + colW*2, curY + 5, {width: colW, align: 'center'});
-    doc.text(challan.amount_paid.toString(), startX + colW*3, curY + 5, {width: colW, align: 'center'});
-    doc.text(netBal.toString(), startX + colW*4, curY + 5, {width: colW, align: 'center'});
-
-    for(let i=1; i<5; i++) {
-        doc.moveTo(startX + (colW * i), curY - 18).lineTo(startX + (colW * i), curY + 18).stroke();
-    }
-
-    curY += 25;
-    doc.fontSize(9).font('Helvetica-Bold').text('Amount In Words: ', startX, curY, { continued: true });
-    doc.font('Helvetica').text(`${numberToWords(netBal)} ONLY`);
-
-    curY += 30;
-    doc.font('Helvetica').text('Bank Authorized Signature ________________________', startX, curY);
-    curY += 15;
-    doc.text('Mobile Number: ________________________', startX, curY);
-
-    curY += 25;
-    doc.font('Helvetica-Bold').text('Instruction for Parents/Students', startX, curY);
-    doc.moveTo(startX, curY + 12).lineTo(startX + sliceWidth, curY + 12).stroke();
-    curY += 16;
-    doc.font('Helvetica').fontSize(8);
-    doc.text('1. After 5th of this month a fine of Rs 50 will be charged per day.', startX, curY);
-    doc.text('2. All dues once paid are not refundable except security.', startX, curY + 12);
-    doc.text('3. Can be deposited free online in any branch of Faysal Bank.', startX, curY + 24);
-
-    curY += 45;
-    const disclaimer = `Account Office: 03269102422 | Helpline: 03051755551\nAccount: 3126701000006213 (Faysal Bank)\nTitle: Sumama Khan\nSchool Reg Id: 220285011882`;
-    doc.fontSize(8).text(disclaimer, startX, curY, { width: sliceWidth, align: 'center' });
-
-    if (xOffset < 560) {
-        doc.moveTo(xOffset + 280.63, 15).lineTo(xOffset + 280.63, 580).dash(2, { space: 2 }).stroke();
+      curY += 42;
+      
+      // Footer and Instructions
+      doc.fontSize(8).font('Helvetica-Bold').fillColor('#0F172A').text('Amount In Words:', marginX, curY, { continued: true });
+      doc.font('Helvetica').text(`  ${numberToWords(netBal).toUpperCase()} RUPEES ONLY`);
+      
+      curY += 15;
+      doc.fontSize(7).font('Helvetica').fillColor('#64748B');
+      doc.text('1. Fine of Rs 50/day after due date. 2. Dues non-refundable. 3. Pay online in any Faysal Bank branch.', marginX, curY);
+      
+      doc.fontSize(8).font('Helvetica-Bold').fillColor('#0F172A').text('Cashier Signature:', marginX + sliceWidth - 160, curY - 10);
+      doc.moveTo(marginX + sliceWidth - 70, curY).lineTo(marginX + sliceWidth, curY).strokeColor('#94A3B8').stroke();
+      
+      // Divider Line between slices
+      if (yOffset < 500) {
+        doc.strokeColor('#CBD5E1').moveTo(0, yOffset + 280.63).lineTo(595.28, yOffset + 280.63).dash(4, { space: 4 }).stroke();
         doc.undash();
-    }
-  };
+      }
+    };
 
-  const sliceWidth = 841.89 / 3;
-  drawSlice(0, 'Bank Copy');
-  drawSlice(sliceWidth, 'School Copy');
-  drawSlice(sliceWidth * 2, 'Student Copy');
+    const sliceHeight = 841.89 / 3;
+    drawSlice(0, 'Bank Copy');
+    drawSlice(sliceHeight, 'School Copy');
+    drawSlice(sliceHeight * 2, 'Student Copy');
 
   doc.end();
 };
