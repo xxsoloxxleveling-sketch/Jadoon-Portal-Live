@@ -28,6 +28,24 @@ export const createStudent = async (req: Request, res: Response): Promise<any> =
        };
     }
     
+    let final_sibling_ids: string[] = [];
+    if (sibling_ids && Array.isArray(sibling_ids) && sibling_ids.length > 0) {
+      const validObjectIds = sibling_ids.filter(id => /^[a-fA-F0-9]{24}$/.test(id));
+      const admissionNumbers = sibling_ids.filter(id => !/^[a-fA-F0-9]{24}$/.test(id));
+
+      const orConditions: any[] = [];
+      if (validObjectIds.length > 0) orConditions.push({ id: { in: validObjectIds } });
+      if (admissionNumbers.length > 0) orConditions.push({ admission_number: { in: admissionNumbers } });
+
+      if (orConditions.length > 0) {
+        const siblings = await prisma.student.findMany({
+          where: { OR: orConditions },
+          select: { id: true }
+        });
+        final_sibling_ids = siblings.map(s => s.id);
+      }
+    }
+
     const newStudent = await prisma.student.create({
       data: {
         admission_number, first_name, last_name,
@@ -39,7 +57,7 @@ export const createStudent = async (req: Request, res: Response): Promise<any> =
         address: address || null,
         is_orphan: is_orphan || false,
         is_needy: is_needy || false,
-        sibling_ids: sibling_ids || [],
+        sibling_ids: final_sibling_ids,
         user: userArgs
       }
     });
@@ -162,7 +180,26 @@ export const updateStudent = async (req: Request, res: Response) => {
     if (dob) updateData.dob = new Date(dob);
     if (typeof is_orphan === 'boolean') updateData.is_orphan = is_orphan;
     if (typeof is_needy === 'boolean') updateData.is_needy = is_needy;
-    if (Array.isArray(sibling_ids)) updateData.sibling_ids = sibling_ids;
+    
+    if (Array.isArray(sibling_ids)) {
+      const validObjectIds = sibling_ids.filter(id => /^[a-fA-F0-9]{24}$/.test(id));
+      const admissionNumbers = sibling_ids.filter(id => !/^[a-fA-F0-9]{24}$/.test(id));
+
+      const orConditions: any[] = [];
+      if (validObjectIds.length > 0) orConditions.push({ id: { in: validObjectIds } });
+      if (admissionNumbers.length > 0) orConditions.push({ admission_number: { in: admissionNumbers } });
+
+      if (orConditions.length > 0) {
+        const siblings = await prisma.student.findMany({
+          where: { OR: orConditions },
+          select: { id: true }
+        });
+        updateData.sibling_ids = siblings.map(s => s.id);
+      } else {
+        updateData.sibling_ids = [];
+      }
+    }
+
     if (guardian_name) updateData.guardian_name = encrypt(guardian_name);
     if (guardian_phone) updateData.guardian_phone = encrypt(guardian_phone);
     

@@ -448,7 +448,7 @@ export default function Students() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <input name="blood_group" type="text" placeholder="Blood Group" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
-                <input name="sibling_ids" type="text" placeholder="Sibling IDs (Comma sep)" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
+                <input name="sibling_ids" type="text" placeholder="Sibling Admission Nos (Comma sep)" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
               </div>
               <input name="guardian_name" type="text" placeholder="Guardian Name" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
               <input name="guardian_phone" type="text" placeholder="Guardian Phone" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
@@ -493,7 +493,7 @@ export default function Students() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <input name="blood_group" defaultValue={(profile as any).blood_group || ''} type="text" placeholder="Blood Group" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
-                <input name="sibling_ids" defaultValue={((profile as any).sibling_ids || []).join(', ')} type="text" placeholder="Sibling IDs (Comma sep)" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
+                <input name="sibling_ids" defaultValue={((profile as any).sibling_ids || []).join(', ')} type="text" placeholder="Sibling Admission Nos (Comma sep)" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
               </div>
               <input name="guardian_name" defaultValue={profile.guardian_name || ''} type="text" placeholder="Guardian Name" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
               <input name="guardian_phone" defaultValue={profile.guardian_phone || ''} type="text" placeholder="Guardian Phone" className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none" />
