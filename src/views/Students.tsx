@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/src/components/ui/Card';
-import { Users, Loader2, X, FileText, CheckCircle2, ChevronRight, Activity, Calendar, UploadCloud, Search } from 'lucide-react';
+import { Users, Loader2, X, FileText, CheckCircle2, ChevronRight, Activity, Calendar, UploadCloud, Search, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuthStore } from '../store/useStore';
 import { Dialog } from '@/src/components/ui/Dialog';
@@ -20,6 +20,7 @@ interface ProfileDetails extends Student {
   fee_challans?: Array<{ id: string, amount_due: number, status: string, due_date: string }>;
   attendances?: Array<{ id: string, status: string, date: string }>;
   documents?: Array<{ id: string, title: string, url: string }>;
+  evaluations?: Array<{ id: string, score: number, remarks: string, evaluation_date: string, evaluator_name: string }>;
 }
 
 export default function Students() {
@@ -162,6 +163,24 @@ export default function Students() {
       if (res.ok) queryClient.invalidateQueries({ queryKey: ['student', activeStudentId] });
       else alert('Failed to upload document');
     } catch (err) {}
+  };
+
+  const handleAddEvaluation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeStudentId) return;
+    const fd = new FormData(e.target as HTMLFormElement);
+    const data = Object.fromEntries(fd.entries());
+    data.student_id = activeStudentId;
+    
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/employees/evaluation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) queryClient.invalidateQueries({ queryKey: ['student', activeStudentId] });
+    } catch (err) {}
+    (e.target as HTMLFormElement).reset();
   };
 
   const handleDeleteClick = (id: string) => {
@@ -377,6 +396,27 @@ export default function Students() {
                          </div>
                        ))
                      ) : <p className="text-sm text-slate-400 font-medium italic">No attendance records generated yet.</p>}
+                   </div>
+                 )}
+
+                 {/* Performance Evaluations */}
+                 {(role === 'TEACHER' || role === 'SUPER_ADMIN' || role === 'ADMIN') && (
+                   <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100">
+                     <h4 className="text-sm font-bold text-amber-800 flex items-center mb-4"><Star size={16} className="mr-2"/> Performance</h4>
+                     <div className="max-h-40 overflow-y-auto mb-4 space-y-2">
+                       {profile.evaluations?.map(ev => (
+                         <div key={ev.id} className="text-sm bg-white p-2 rounded-lg">
+                           <div className="flex justify-between font-bold"><span>{ev.score}/100</span><span className="text-[10px] text-slate-400">{new Date(ev.evaluation_date).toLocaleDateString()}</span></div>
+                           <p className="text-xs mt-1 text-slate-600">{ev.remarks}</p>
+                         </div>
+                       ))}
+                     </div>
+                     <form onSubmit={handleAddEvaluation} className="flex flex-col space-y-2">
+                       <input name="score" type="number" min="0" max="100" placeholder="Score (0-100)" required className="w-full text-xs p-2 rounded-lg border outline-none" />
+                       <input name="remarks" type="text" placeholder="Remarks" required className="w-full text-xs p-2 rounded-lg border outline-none" />
+                       <input name="evaluator_name" type="text" placeholder="Evaluator Name" required className="w-full text-xs p-2 rounded-lg border outline-none" />
+                       <button type="submit" className="w-full py-2 bg-amber-500 text-white text-xs font-bold rounded-lg hover:bg-amber-600">Add Evaluation</button>
+                     </form>
                    </div>
                  )}
                </div>

@@ -113,7 +113,8 @@ export const getStudentProfile = async (req: Request, res: Response) => {
     where: { id },
     include: {
       attendances: { orderBy: { date: 'desc' }, take: 30 },
-      fee_challans: { orderBy: { due_date: 'desc' } }
+      fee_challans: { orderBy: { due_date: 'desc' } },
+      evaluations: { orderBy: { evaluation_date: 'desc' } }
     }
   });
 

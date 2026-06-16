@@ -103,11 +103,12 @@ export const createSalaryRecord = async (req: Request, res: Response) => {
 
 export const createPerformanceEvaluation = async (req: Request, res: Response) => {
   try {
-    const { employee_id, teacher_id, score, remarks, evaluator_name } = req.body;
+    const { employee_id, teacher_id, student_id, score, remarks, evaluator_name } = req.body;
     const evaluation = await prisma.performanceEvaluation.create({
       data: {
         employee_id: employee_id || null,
         teacher_id: teacher_id || null,
+        student_id: student_id || null,
         score: Number(score),
         remarks,
         evaluator_name

@@ -52,6 +52,7 @@ model Student {
   attendances      Attendance[]
   fee_challans     FeeChallan[]
   exam_results     ExamResult[]
+  evaluations      PerformanceEvaluation[]
   documents        Document[]
 
   is_orphan        Boolean  @default(false)
@@ -247,6 +248,9 @@ model PerformanceEvaluation {
   
   employee_id    String?  @db.ObjectId
   employee       Employee? @relation(fields: [employee_id], references: [id])
+
+  student_id     String?  @db.ObjectId
+  student        Student? @relation(fields: [student_id], references: [id])
 }
 
 model Document {

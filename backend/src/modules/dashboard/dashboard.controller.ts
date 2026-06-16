@@ -9,9 +9,6 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const targetDateStr = date ? (date as string) : new Date().toISOString().split('T')[0];
     const targetDate = new Date(targetDateStr);
     
-    // We need to match date exactly or by range based on how attendance is saved.
-    // In schema, date is DateTime. A lot of apps save date at midnight.
-
     // 1. Total Students
     const totalStudents = await prisma.student.count();
 
@@ -90,12 +87,82 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 
       return {
         id: activity.id,
-        user: activity.role === 'SYSTEM_ADMIN' ? 'Admin' : activity.performed_by.substring(0, 8),
+        user: activity.role === 'SUPER_ADMIN' ? 'Admin' : activity.performed_by.substring(0, 8),
         action: activity.action.replace(/_/g, ' ').toLowerCase() + (activity.details ? ` - ${activity.details.substring(0,20)}...` : ''),
         time: timeStr,
         type: type
       };
     });
+
+    // --- NEW FUNCTIONAL STATS ---
+
+    // 7. Cash Flow
+    const salaries = await prisma.salaryRecord.findMany({
+      where: { month: currentMonth, year: currentYear }
+    });
+    let totalSalariesPaid = 0;
+    salaries.forEach(s => totalSalariesPaid += s.net_amount);
+    const cashFlow = { income: totalPaid, expenses: totalSalariesPaid };
+
+    // 8. Defaulter Alerts
+    const unpaidChallans = await prisma.feeChallan.findMany({
+      where: { status: 'PENDING' }
+    });
+    let totalOutstanding = 0;
+    unpaidChallans.forEach(c => totalOutstanding += c.amount_due);
+    const defaultersCount = unpaidChallans.length;
+    const defaulters = { count: defaultersCount, amount: totalOutstanding };
+
+    // 9. Demographics Breakdown
+    const studentsByGender = await prisma.student.groupBy({
+      by: ['gender'],
+      _count: { gender: true }
+    });
+    const genderDemographics = studentsByGender.map(g => ({
+      name: g.gender || 'Unknown',
+      value: g._count.gender
+    }));
+
+    // 10. Low Attendance (>=3 absences in last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const recentAbsences = await prisma.attendance.groupBy({
+      by: ['student_id'],
+      where: { status: 'ABSENT', date: { gte: thirtyDaysAgo } },
+      _count: { student_id: true },
+      having: { student_id: { _count: { gte: 3 } } }
+    });
+    
+    // Convert to list of objects with count
+    const lowAttendanceStudentIds = recentAbsences.map(a => a.student_id);
+    const lowAttData = await prisma.student.findMany({
+      where: { id: { in: lowAttendanceStudentIds } },
+      select: { id: true, first_name: true, last_name: true, admission_number: true }
+    });
+    
+    const lowAttendance = lowAttData.map(student => {
+      const absCount = recentAbsences.find(a => a.student_id === student.id)?._count.student_id || 0;
+      return {
+        name: `${student.first_name} ${student.last_name}`,
+        admission_number: student.admission_number,
+        absences: absCount
+      };
+    });
+
+    // 11. Top Performers
+    const recentEvals = await prisma.performanceEvaluation.findMany({
+      orderBy: { score: 'desc' },
+      take: 5,
+      include: { teacher: true, student: true, employee: true }
+    });
+    const topPerformers = recentEvals.map(e => ({
+      id: e.id,
+      name: e.teacher ? `${e.teacher.first_name} ${e.teacher.last_name}` : 
+            e.student ? `${e.student.first_name} ${e.student.last_name}` :
+            e.employee ? `${e.employee.first_name} ${e.employee.last_name}` : 'Unknown',
+      type: e.teacher ? 'Teacher' : e.student ? 'Student' : e.employee ? 'Employee' : 'Unknown',
+      score: e.score
+    }));
 
     res.json({
       totalStudents,
@@ -103,7 +170,12 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       feeCollection,
       activeStaff,
       attendanceTrend,
-      recentActivities
+      recentActivities,
+      cashFlow,
+      defaulters,
+      genderDemographics,
+      lowAttendance,
+      topPerformers
     });
 
   } catch (error) {

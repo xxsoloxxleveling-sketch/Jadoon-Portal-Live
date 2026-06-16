@@ -43,7 +43,8 @@ export const getAllTeachers = async (req: Request, res: Response) => {
       include: {
         user: { select: { email: true, role: true } },
         subjects: true,
-        documents: true
+        documents: true,
+        evaluations: { orderBy: { evaluation_date: 'desc' } }
       },
       orderBy: { employee_id: 'asc' }
     });
@@ -62,7 +63,8 @@ export const getAllTeachers = async (req: Request, res: Response) => {
       qualifications: t.qualifications,
       hire_date: t.hire_date,
       role: t.user.role,
-      documents: t.documents
+      documents: t.documents,
+      evaluations: t.evaluations
     }));
     
     res.json(formatted);
