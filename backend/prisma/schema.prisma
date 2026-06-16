@@ -1,0 +1,267 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  email         String   @unique
+  password_hash String
+  role          String   
+  created_at    DateTime @default(now())
+
+  studentProfile Student?
+  teacherProfile Teacher?
+  employeeProfile Employee?
+  notifications  Notification[]
+}
+
+model Class {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  name        String    @unique
+  
+  students    Student[]
+  
+  subjectIDs  String[]  @db.ObjectId
+  subjects    Subject[] @relation(fields: [subjectIDs], references: [id])
+  
+  attendances Attendance[]
+}
+
+model Student {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  admission_number String?  @unique
+  first_name       String
+  last_name        String
+  dob              DateTime?
+  gender           String?
+  blood_group      String?
+  guardian_name    String?
+  guardian_phone   String?
+  address          String?
+  
+  userId           String?  @unique @db.ObjectId
+  user             User?    @relation(fields: [userId], references: [id])
+  current_grade_id String?  @db.ObjectId
+  class            Class?   @relation(fields: [current_grade_id], references: [id])
+  
+  attendances      Attendance[]
+  fee_challans     FeeChallan[]
+  exam_results     ExamResult[]
+  documents        Document[]
+
+  is_orphan        Boolean  @default(false)
+  is_needy         Boolean  @default(false)
+  sibling_ids      String[] @db.ObjectId
+
+  @@index([current_grade_id]) 
+}
+
+model Teacher {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  employee_id        String   @unique
+  first_name         String?
+  last_name          String?
+  designation        String?
+  dob                DateTime?
+  address            String?
+  phone              String?
+  qualifications     String?
+  hire_date          DateTime?
+
+  userId             String   @unique @db.ObjectId
+  user               User     @relation(fields: [userId], references: [id])
+  
+  subjectIDs         String[] @db.ObjectId
+  subjects           Subject[] @relation(fields: [subjectIDs], references: [id])
+  
+  marked_attendances Attendance[]
+  teacherAttendances TeacherAttendance[]
+  
+  salary_records     SalaryRecord[]
+  evaluations        PerformanceEvaluation[]
+  documents          Document[]
+}
+
+model Subject {
+  id       String    @id @default(auto()) @map("_id") @db.ObjectId
+  name     String
+  code     String    @unique
+
+  classIDs String[]  @db.ObjectId
+  classes  Class[]   @relation(fields: [classIDs], references: [id])
+  
+  teacherIDs String[] @db.ObjectId
+  teachers   Teacher[] @relation(fields: [teacherIDs], references: [id])
+  
+  exam_results ExamResult[]
+}
+
+model Attendance {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  date       DateTime 
+  status     String   
+  
+  student_id String   @db.ObjectId
+  student    Student  @relation(fields: [student_id], references: [id])
+  class_id   String   @db.ObjectId
+  class      Class    @relation(fields: [class_id], references: [id])
+  marked_by  String   @db.ObjectId
+  teacher    Teacher  @relation(fields: [marked_by], references: [id])
+
+  @@unique([student_id, date])
+  @@index([class_id, date]) 
+}
+
+model FeeChallan {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  month            Int
+  year             Int
+  amount_due       Float    
+  amount_paid      Float    @default(0) 
+  due_date         DateTime
+  status           String   @default("PENDING") 
+  late_fee_applied Boolean  @default(false)
+
+  student_id       String   @db.ObjectId
+  student          Student  @relation(fields: [student_id], references: [id])
+
+  custom_fields    Json?
+
+  @@index([student_id, status]) 
+}
+
+model Exam {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String   
+  start_date  DateTime
+  end_date    DateTime
+  
+  results     ExamResult[]
+}
+
+model ExamResult {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  marks_obtained Float
+  total_marks    Float
+  remarks        String?
+
+  exam_id        String   @db.ObjectId
+  exam           Exam     @relation(fields: [exam_id], references: [id])
+  student_id     String   @db.ObjectId
+  student        Student  @relation(fields: [student_id], references: [id])
+  subject_id     String   @db.ObjectId
+  subject        Subject  @relation(fields: [subject_id], references: [id])
+
+  @@unique([exam_id, student_id, subject_id])
+}
+
+model AuditLog {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  action       String   
+  entity       String   
+  entity_id    String?  
+  role         String   
+  performed_by String   
+  details      String?  
+  timestamp    DateTime @default(now())
+
+  @@index([role, timestamp])
+}
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+model TeacherAttendance {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  teacher_id String   @db.ObjectId
+  teacher    Teacher  @relation(fields: [teacher_id], references: [id])
+  date       DateTime @default(now())
+  status     String   @default("PRESENT")
+  
+  @@index([teacher_id, date])
+}
+
+model Employee {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  employee_id        String   @unique
+  first_name         String?
+  last_name          String?
+  designation        String?
+  department         String?
+  dob                DateTime?
+  address            String?
+  phone              String?
+  hire_date          DateTime?
+
+  userId             String?   @unique @db.ObjectId
+  user               User?     @relation(fields: [userId], references: [id])
+  
+  salary_records     SalaryRecord[]
+  evaluations        PerformanceEvaluation[]
+  documents          Document[]
+}
+
+model SalaryRecord {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  month          Int
+  year           Int
+  base_amount    Float
+  allowances     Float    @default(0)
+  deductions     Float    @default(0)
+  net_amount     Float
+  payment_date   DateTime?
+  status         String   @default("PENDING")
+
+  teacher_id     String?  @db.ObjectId
+  teacher        Teacher? @relation(fields: [teacher_id], references: [id])
+  
+  employee_id    String?  @db.ObjectId
+  employee       Employee? @relation(fields: [employee_id], references: [id])
+
+  @@index([month, year])
+}
+
+model PerformanceEvaluation {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  evaluation_date DateTime @default(now())
+  score          Float
+  remarks        String?
+  evaluator_name String?
+
+  teacher_id     String?  @db.ObjectId
+  teacher        Teacher? @relation(fields: [teacher_id], references: [id])
+  
+  employee_id    String?  @db.ObjectId
+  employee       Employee? @relation(fields: [employee_id], references: [id])
+}
+
+model Document {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  title          String
+  url            String
+  uploaded_at    DateTime @default(now())
+  document_type  String?
+
+  student_id     String?  @db.ObjectId
+  student        Student? @relation(fields: [student_id], references: [id])
+
+  teacher_id     String?  @db.ObjectId
+  teacher        Teacher? @relation(fields: [teacher_id], references: [id])
+  
+  employee_id    String?  @db.ObjectId
+  employee       Employee? @relation(fields: [employee_id], references: [id])
+}
