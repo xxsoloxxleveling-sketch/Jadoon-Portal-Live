@@ -178,7 +178,8 @@ export const getSalarySlipPdf = async (req: Request, res: Response) => {
 
 export const getSalaryStatementPdf = async (req: Request, res: Response) => {
   try {
-    const { type, id } = req.params; // type = 'teacher' | 'employee'
+    const type = req.params.type as string;
+    const id = req.params.id as string;
     
     let person: any = null;
     let records = [];
