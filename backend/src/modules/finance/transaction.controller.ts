@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { AuthRequest } from '../../middlewares/authMiddleware';
 import prisma from '../../config/database';
 import PDFDocument from 'pdfkit';
 import { logoBase64 } from './logoData';
@@ -22,11 +23,11 @@ export const getTransactions = async (req: Request, res: Response) => {
   }
 };
 
-export const createTransaction = async (req: Request, res: Response) => {
+export const createTransaction = async (req: AuthRequest, res: Response) => {
   try {
     const { title, amount, type, date, status, reference, description, category_id } = req.body;
-    // Assuming req.user is set by authMiddleware
-    const created_by = (req as any).user?.userId || null;
+    // req.user is set by authMiddleware
+    const created_by = req.user?.id || null;
 
     const transaction = await prisma.transaction.create({
       data: {
