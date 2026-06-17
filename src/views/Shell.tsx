@@ -12,7 +12,8 @@ import {
   Search, 
   Bell, 
   LogOut,
-  Banknote
+  Banknote,
+  Receipt
 } from 'lucide-react';
 import { useAuthStore } from '../store/useStore';
 
@@ -23,8 +24,9 @@ const navItems = [
   { id: 'attendance', label: 'Attendance', icon: CalendarCheck },
   { id: 'fees', label: 'Fee Challans', icon: FileText },
   { id: 'teachers', label: 'Teachers', icon: Briefcase },
-  { id: 'employees', label: 'Employees', icon: Users },
+  { id: 'employees', label: 'Staff', icon: Users },
   { id: 'payroll', label: 'Payroll', icon: Banknote },
+  { id: 'transactions', label: 'Transactions', icon: Receipt },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 

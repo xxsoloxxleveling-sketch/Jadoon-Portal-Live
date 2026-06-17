@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DndContext, useDraggable, useDroppable, DragEndEvent } from '@dnd-kit/core';
 import { motion, AnimatePresence } from 'motion/react';
-import { Users, GripVertical, CheckCircle2, Loader2, Save, Plus } from 'lucide-react';
+import { Users, GripVertical, CheckCircle2, Loader2, Save, Plus, Edit2, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../store/useStore';
 
 interface StudentData {
@@ -53,11 +53,15 @@ const DraggableStudent: React.FC<{ student: StudentData }> = ({ student }) => {
 const DroppableBucket = ({ 
   enrolledStudents, 
   existingStudents,
-  targetClass
+  targetClass,
+  onEdit,
+  onDelete
 }: { 
   enrolledStudents: StudentData[], 
   existingStudents: StudentData[],
-  targetClass: ClassData | null
+  targetClass: ClassData | null,
+  onEdit: () => void,
+  onDelete: () => void
 }) => {
   const { setNodeRef, isOver } = useDroppable({ id: 'class_bucket' });
 
@@ -77,6 +81,16 @@ const DroppableBucket = ({
           </h2>
           <p className="text-slate-500 font-medium text-sm mt-1">Target Bucket ({currentCount} students)</p>
         </div>
+        {targetClass && (
+           <div className="flex space-x-3">
+             <button onClick={onEdit} className="p-2 bg-white rounded-xl shadow-sm text-slate-500 hover:text-blue-600 transition-colors">
+               <Edit2 size={18} />
+             </button>
+             <button onClick={onDelete} className="p-2 bg-white rounded-xl shadow-sm text-slate-500 hover:text-red-600 transition-colors">
+               <Trash2 size={18} />
+             </button>
+           </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto pr-2 space-y-3">
@@ -242,6 +256,45 @@ export default function ClassManager() {
     }
   };
 
+  const handleEditClass = async () => {
+    if (!targetClass) return;
+    const newName = prompt("Enter new Class Name:", targetClass.name);
+    if (!newName || newName === targetClass.name) return;
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/academic/classes/${targetClass.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ name: newName })
+      });
+      if (!res.ok) throw new Error('Failed to update class');
+      const updatedClass = await res.json();
+      setClasses(classes.map(c => c.id === targetClass.id ? { ...c, name: updatedClass.name } : c));
+    } catch (err) {
+      alert("Failed to update class");
+    }
+  };
+
+  const handleDeleteClass = async () => {
+    if (!targetClass) return;
+    if (!window.confirm(`Are you sure you want to delete the class "${targetClass.name}"? This action cannot be undone.`)) return;
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/academic/classes/${targetClass.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+         const data = await res.json();
+         throw new Error(data.error || 'Failed to delete class');
+      }
+      setClasses(classes.filter(c => c.id !== targetClass.id));
+      setSelectedClassId('');
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   const handleBatchEnroll = async () => {
     if (enrolled.length === 0 || !targetClass) return;
     setSaving(true);
@@ -332,7 +385,7 @@ export default function ClassManager() {
             </div>
           </div>
 
-          <DroppableBucket enrolledStudents={enrolled} existingStudents={existingStudents} targetClass={targetClass} />
+          <DroppableBucket enrolledStudents={enrolled} existingStudents={existingStudents} targetClass={targetClass} onEdit={handleEditClass} onDelete={handleDeleteClass} />
         </div>
       </DndContext>
     </div>

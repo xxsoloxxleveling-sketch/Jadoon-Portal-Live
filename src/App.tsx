@@ -10,6 +10,7 @@ import ClassManager from './views/ClassManager';
 import Teachers from './views/Teachers';
 import Employees from './views/Employees';
 import Payroll from './views/Payroll';
+import Transactions from './views/Transactions';
 import Settings from './views/Settings';
 import { useAuthStore } from './store/useStore';
 
@@ -41,6 +42,7 @@ const router = createBrowserRouter([
       { path: 'teachers', element: <Teachers /> },
       { path: 'employees', element: <Employees /> },
       { path: 'payroll', element: <Payroll /> },
+      { path: 'transactions', element: <Transactions /> },
       { path: 'settings', element: <Settings /> },
     ]
   }

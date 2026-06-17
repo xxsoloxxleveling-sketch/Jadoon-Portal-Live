@@ -142,15 +142,18 @@ export const downloadChallanPDF = async (req: Request, res: Response) => {
       doc.fontSize(10).font('Helvetica-Bold').fillColor('#475569')
          .text('FAYSAL BANK', marginX + 65, startY + 22, { width: sliceWidth - 65, align: 'left' });
          
+      doc.fontSize(8).font('Helvetica-Bold').fillColor('#0F172A')
+         .text('Sumama Khan / A/C: 3126701000006213', marginX + 65, startY + 35, { width: sliceWidth - 65, align: 'left' });
+
       doc.fontSize(10).font('Helvetica-Bold').fillColor('#000000')
-         .text(copyType, marginX + 65, startY + 35, { width: sliceWidth - 65, align: 'left' });
+         .text(copyType, marginX + 65, startY + 46, { width: sliceWidth - 65, align: 'left' });
          
       // Challan ID Box (Right aligned)
       doc.roundedRect(marginX + sliceWidth - 140, startY + 5, 140, 30, 4).lineWidth(1).stroke('#CBD5E1');
       doc.fontSize(8).font('Helvetica').fillColor('#64748B').text('CHALLAN NO', marginX + sliceWidth - 140, startY + 10, { width: 140, align: 'center' });
       doc.fontSize(12).font('Helvetica-Bold').fillColor('#0F172A').text(challan.id.slice(-10).toUpperCase(), marginX + sliceWidth - 140, startY + 20, { width: 140, align: 'center', characterSpacing: 1 });
 
-      let curY = startY + 60;
+      let curY = startY + 70;
       
       // Student Details Section (2 columns)
       doc.roundedRect(marginX, curY, sliceWidth, 45, 4).fillColor('#F8FAFC').fill();

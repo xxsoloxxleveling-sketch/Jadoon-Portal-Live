@@ -86,6 +86,48 @@ export const createClass = async (req: Request, res: Response): Promise<any> => 
   res.json(newClass);
 };
 
+export const updateClass = async (req: Request, res: Response): Promise<any> => {
+  const { id } = req.params;
+  const { name } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ error: 'Class Name is required.' });
+  }
+
+  try {
+    const updatedClass = await prisma.class.update({
+      where: { id: String(id) },
+      data: { name }
+    });
+    res.json(updatedClass);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update class' });
+  }
+};
+
+export const deleteClass = async (req: Request, res: Response): Promise<any> => {
+  const { id } = req.params;
+
+  try {
+    // Basic protection: don't delete if students are attached
+    const classData = await prisma.class.findUnique({
+      where: { id: String(id) },
+      include: { _count: { select: { students: true } } }
+    });
+
+    if (classData && classData._count.students > 0) {
+      return res.status(400).json({ error: 'Cannot delete class with enrolled students.' });
+    }
+
+    await prisma.class.delete({
+      where: { id: String(id) }
+    });
+    res.json({ message: 'Class deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete class' });
+  }
+};
+
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {
     const totalStudents = await prisma.student.count();

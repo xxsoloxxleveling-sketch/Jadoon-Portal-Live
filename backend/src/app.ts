@@ -13,6 +13,7 @@ import employeeRoutes from './modules/employees/employee.routes';
 import documentRoutes from './modules/documents/document.routes';
 import auditRoutes from './modules/audit/audit.routes';
 import salaryRoutes from './modules/finance/salary.routes';
+import transactionRoutes from './modules/finance/transaction.routes';
 import notificationRoutes from './modules/notifications/notifications.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
 
@@ -44,6 +45,7 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/salary', salaryRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error({ err }, `[SECURE_LOG] Error intercepted: ${err.message}`); // Only log message natively to prevent leaking full stack structures

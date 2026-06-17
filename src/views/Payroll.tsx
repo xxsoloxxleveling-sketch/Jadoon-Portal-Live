@@ -294,16 +294,24 @@ export default function Payroll() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {salary.status === 'PENDING' ? (
+                        <div className="flex justify-end space-x-2">
                           <button 
-                            onClick={() => updateStatus(salary.id, 'PAID')}
-                            className="text-sm font-semibold text-blue-600 hover:text-blue-800"
+                            onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/salary/${salary.id}/download?token=${token}`)}
+                            className="text-sm font-semibold text-slate-500 hover:text-slate-800"
                           >
-                            Mark Paid
+                            <Download size={16} />
                           </button>
-                        ) : (
-                          <span className="text-sm text-slate-400">Settled</span>
-                        )}
+                          {salary.status === 'PENDING' ? (
+                            <button 
+                              onClick={() => updateStatus(salary.id, 'PAID')}
+                              className="text-sm font-semibold text-blue-600 hover:text-blue-800"
+                            >
+                              Mark Paid
+                            </button>
+                          ) : (
+                            <span className="text-sm text-slate-400">Settled</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

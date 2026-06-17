@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createTeacher, getAllTeachers, markAttendance, getAttendanceHistory, getAllTeacherAttendance, updateTeacher, deleteTeacher } from './teacher.controller';
+import { createTeacher, getAllTeachers, markAttendance, getAttendanceHistory, getAllTeacherAttendance, updateTeacher, deleteTeacher, getTeacherProfilePdf } from './teacher.controller';
 import { requireAuth, requireRole } from '../../middlewares/authMiddleware';
 
 const router = Router();
@@ -11,5 +11,6 @@ router.get('/attendance/history', requireAuth, requireRole(['TEACHER']), getAtte
 router.get('/attendance/all', requireAuth, requireRole(['SUPER_ADMIN']), getAllTeacherAttendance);
 router.put('/:id', requireAuth, requireRole(['SUPER_ADMIN']), updateTeacher);
 router.delete('/:id', requireAuth, requireRole(['SUPER_ADMIN']), deleteTeacher);
+router.get('/:id/download', requireAuth, requireRole(['SUPER_ADMIN', 'ADMIN', 'TEACHER']), getTeacherProfilePdf);
 
 export default router;

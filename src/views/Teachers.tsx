@@ -278,12 +278,15 @@ export default function Teachers() {
                 <p className="text-sm text-slate-500 font-medium">{activeTeacher.designation || 'Faculty Member'}</p>
                 <span className="inline-block px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full tracking-wider">{activeTeacher.employee_id}</span>
                 
-                {role === 'SUPER_ADMIN' && (
-                  <div className="flex justify-center space-x-2 mt-4">
-                    <button onClick={() => setShowEditModal(true)} className="px-3 py-1 text-xs font-bold bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200">Edit</button>
-                    <button onClick={() => handleDeleteClick(activeTeacher.id)} className="px-3 py-1 text-xs font-bold bg-red-100 text-red-700 rounded-lg hover:bg-red-200">Delete</button>
-                  </div>
-                )}
+                <div className="flex justify-center space-x-2 mt-4">
+                  <button onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/teachers/${activeTeacher.id}/download?token=${token}`)} className="px-3 py-1 text-xs font-bold bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200">Download</button>
+                  {role === 'SUPER_ADMIN' && (
+                    <>
+                      <button onClick={() => setShowEditModal(true)} className="px-3 py-1 text-xs font-bold bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200">Edit</button>
+                      <button onClick={() => handleDeleteClick(activeTeacher.id)} className="px-3 py-1 text-xs font-bold bg-red-100 text-red-700 rounded-lg hover:bg-red-200">Delete</button>
+                    </>
+                  )}
+                </div>
               </div>
               <div className="space-y-4">
                  <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center">Information</h4>
