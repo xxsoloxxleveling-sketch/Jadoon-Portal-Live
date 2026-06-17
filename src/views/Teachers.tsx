@@ -279,7 +279,8 @@ export default function Teachers() {
                 <span className="inline-block px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full tracking-wider">{activeTeacher.employee_id}</span>
                 
                 <div className="flex justify-center space-x-2 mt-4">
-                  <button onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/teachers/${activeTeacher.id}/download?token=${token}`)} className="px-3 py-1 text-xs font-bold bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200">Download</button>
+                  <button onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/teachers/${activeTeacher.id}/download?token=${token}`)} className="px-3 py-1 text-xs font-bold bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200">Profile</button>
+                  <button onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/salary/statement/teacher/${activeTeacher.id}?token=${token}`)} className="px-3 py-1 text-xs font-bold bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200">Salary</button>
                   {role === 'SUPER_ADMIN' && (
                     <>
                       <button onClick={() => setShowEditModal(true)} className="px-3 py-1 text-xs font-bold bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200">Edit</button>

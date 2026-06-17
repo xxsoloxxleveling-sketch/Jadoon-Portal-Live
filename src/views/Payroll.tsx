@@ -37,11 +37,11 @@ export default function Payroll() {
     try {
       setLoading(true);
       const [salRes, teachRes, empRes] = await Promise.all([
-        fetch(`/api/salary?month=${selectedMonth}&year=${selectedYear}`, {
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/salary?month=${selectedMonth}&year=${selectedYear}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch('/api/teachers', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/employees', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/teachers`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/employees`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
       if (salRes.ok) {
@@ -70,7 +70,7 @@ export default function Payroll() {
   const handleCreateSalary = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/salary', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/salary`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -102,7 +102,7 @@ export default function Payroll() {
 
   const updateStatus = async (id: string, status: string) => {
     try {
-      const res = await fetch(`/api/salary/${id}/status`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/salary/${id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

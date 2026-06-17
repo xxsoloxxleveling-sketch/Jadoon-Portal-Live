@@ -248,6 +248,7 @@ export default function Employees() {
               
               {role === 'SUPER_ADMIN' && (
                 <div className="flex justify-center space-x-2 pt-2">
+                  <button onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/salary/statement/employee/${activeEmp.id}?token=${token}`)} className="px-3 py-1 text-xs font-bold bg-emerald-100 text-emerald-700 rounded-lg">Salary</button>
                   <button onClick={() => setShowEditModal(true)} className="px-3 py-1 text-xs font-bold bg-blue-100 text-blue-700 rounded-lg">Edit</button>
                   <button onClick={() => setDeleteDialog({isOpen: true, id: activeEmp.id})} className="px-3 py-1 text-xs font-bold bg-red-100 text-red-700 rounded-lg">Delete</button>
                 </div>

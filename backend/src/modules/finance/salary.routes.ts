@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createSalaryRecord, getSalaryRecords, updateSalaryStatus, getSalarySlipPdf } from './salary.controller';
+import { createSalaryRecord, getSalaryRecords, updateSalaryStatus, getSalarySlipPdf, getSalaryStatementPdf } from './salary.controller';
 import { requireAuth } from '../../middlewares/authMiddleware';
 
 const router = Router();
@@ -10,5 +10,6 @@ router.post('/', createSalaryRecord);
 router.get('/', getSalaryRecords);
 router.patch('/:id/status', updateSalaryStatus);
 router.get('/:id/download', getSalarySlipPdf);
+router.get('/statement/:type/:id', getSalaryStatementPdf);
 
 export default router;

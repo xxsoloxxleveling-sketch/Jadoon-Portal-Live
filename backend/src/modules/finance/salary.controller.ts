@@ -175,3 +175,113 @@ export const getSalarySlipPdf = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to generate PDF: ' + err.message });
   }
 };
+
+export const getSalaryStatementPdf = async (req: Request, res: Response) => {
+  try {
+    const { type, id } = req.params; // type = 'teacher' | 'employee'
+    
+    let person: any = null;
+    let records = [];
+
+    if (type === 'teacher') {
+      person = await prisma.teacher.findUnique({ where: { id } });
+      records = await prisma.salaryRecord.findMany({ where: { teacher_id: id }, orderBy: [{ year: 'asc' }, { month: 'asc' }] });
+    } else if (type === 'employee') {
+      person = await prisma.employee.findUnique({ where: { id } });
+      records = await prisma.salaryRecord.findMany({ where: { employee_id: id }, orderBy: [{ year: 'asc' }, { month: 'asc' }] });
+    } else {
+      return res.status(400).json({ error: 'Invalid type' });
+    }
+
+    if (!person) return res.status(404).json({ error: 'Person not found' });
+
+    const employeeId = person.employee_id || 'N/A';
+    const name = `${person.first_name || ''} ${person.last_name || ''}`.trim();
+
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    res.setHeader('Content-disposition', `attachment; filename=Salary_Statement_${employeeId}.pdf`);
+    res.setHeader('Content-type', 'application/pdf');
+    doc.pipe(res);
+
+    if (logoBase64) {
+      try {
+        const logoBuffer = Buffer.from(logoBase64, 'base64');
+        doc.image(logoBuffer, 50, 40, { width: 60 });
+      } catch(e) {}
+    }
+
+    doc.fontSize(22).font('Helvetica-Bold').text('JADOON PUBLIC SCHOOL & COLLEGE', 120, 50, { align: 'left' });
+    doc.fontSize(14).font('Helvetica').text('Salary Statement', 120, 75, { align: 'left' });
+    
+    doc.moveTo(50, 110).lineTo(545, 110).lineWidth(2).stroke();
+    doc.moveDown(2);
+
+    let curY = 130;
+    doc.fontSize(12).font('Helvetica-Bold').text('Employee Details:', 50, curY);
+    curY += 20;
+    doc.fontSize(10).font('Helvetica').text(`Name: ${name}`, 50, curY);
+    doc.text(`Employee ID: ${employeeId}`, 300, curY);
+    curY += 15;
+    doc.text(`Role: ${type === 'teacher' ? 'Teacher' : 'Employee'}`, 50, curY);
+    doc.text(`Designation: ${person.designation || 'N/A'}`, 300, curY);
+    
+    curY += 30;
+    doc.moveTo(50, curY).lineTo(545, curY).lineWidth(1).stroke();
+    curY += 10;
+
+    // Table Header
+    doc.fontSize(10).font('Helvetica-Bold');
+    doc.text('Month/Year', 50, curY);
+    doc.text('Base', 150, curY);
+    doc.text('Allowances', 220, curY);
+    doc.text('Deductions', 310, curY);
+    doc.text('Net Pay', 400, curY);
+    doc.text('Status', 480, curY);
+    
+    curY += 15;
+    doc.moveTo(50, curY).lineTo(545, curY).lineWidth(0.5).stroke();
+    curY += 10;
+
+    doc.font('Helvetica');
+    let totalBase = 0, totalNet = 0;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    records.forEach(r => {
+      if (curY > 750) {
+        doc.addPage();
+        curY = 50;
+      }
+      doc.text(`${months[r.month - 1]} ${r.year}`, 50, curY);
+      doc.text(`Rs.${r.base_amount}`, 150, curY);
+      doc.text(`Rs.${r.allowances}`, 220, curY);
+      doc.text(`Rs.${r.deductions}`, 310, curY);
+      doc.text(`Rs.${r.net_amount}`, 400, curY);
+      doc.text(r.status, 480, curY);
+      
+      totalBase += r.base_amount;
+      totalNet += r.net_amount;
+      curY += 20;
+    });
+
+    curY += 10;
+    doc.moveTo(50, curY).lineTo(545, curY).lineWidth(1).stroke();
+    curY += 15;
+
+    doc.font('Helvetica-Bold');
+    doc.text('Totals:', 50, curY);
+    doc.text(`Rs.${totalBase}`, 150, curY);
+    doc.text(`Rs.${totalNet}`, 400, curY);
+
+    curY += 60;
+    if (curY > 750) {
+      doc.addPage();
+      curY = 50;
+    }
+    doc.fontSize(10).font('Helvetica').text('Note: This is a computer generated document and does not require a physical signature.', 50, curY, { align: 'center', width: 495 });
+
+    doc.end();
+  } catch (err: any) {
+    console.error('Error generating salary statement:', err);
+    res.status(500).json({ error: 'Failed to generate PDF: ' + err.message });
+  }
+};
