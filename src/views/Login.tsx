@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Mail, Lock, GraduationCap, Loader2 } from 'lucide-react';
 import { Button } from '@/src/components/ui/Button';
@@ -16,6 +17,7 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function Login({ onLogin }: { onLogin: (token: string) => void }) {
+  const navigate = useNavigate();
   const [role, setRole] = useState<'Admin' | 'Teacher' | 'Attendance Kiosk'>('Admin');
   
   const { register, handleSubmit, reset, formState: { errors } } = useForm<LoginFormData>({
@@ -60,7 +62,7 @@ export default function Login({ onLogin }: { onLogin: (token: string) => void })
         localStorage.setItem('user_role', data.role);
         // Sync useAuthStore correctly
         useAuthStore.getState().setAuth(data.token, data.role);
-        onLogin(data.token);
+        navigate('/dashboard');
       }
     } catch (err: any) {
       setError(err.message);
