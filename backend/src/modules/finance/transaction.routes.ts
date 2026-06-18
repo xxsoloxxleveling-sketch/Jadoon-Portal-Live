@@ -7,7 +7,8 @@ import {
   getTransactionCategories, 
   createTransactionCategory, 
   deleteTransactionCategory, 
-  getTransactionInvoicePdf 
+  getTransactionInvoicePdf,
+  getTransactionsExportPdf
 } from './transaction.controller';
 import { requireAuth, requireRole } from '../../middlewares/authMiddleware';
 
@@ -26,6 +27,7 @@ router.get('/categories', getTransactionCategories);
 router.post('/categories', requireRole(['ADMIN', 'SUPER_ADMIN']), createTransactionCategory);
 router.delete('/categories/:id', requireRole(['ADMIN', 'SUPER_ADMIN']), deleteTransactionCategory);
 
+router.get('/export/pdf', getTransactionsExportPdf);
 router.get('/:id/download', getTransactionInvoicePdf);
 
 export default router;

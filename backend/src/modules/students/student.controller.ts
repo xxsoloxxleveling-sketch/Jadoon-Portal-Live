@@ -114,8 +114,7 @@ export const getStudents = async (req: Request, res: Response): Promise<any> => 
   if (is_needy === 'true') whereClause.is_needy = true;
   
   const students = await prisma.student.findMany({ 
-    where: whereClause,
-    take: 100 
+    where: whereClause
   }); 
   const decryptedStudents = students.map((s: any) => ({
     ...s,

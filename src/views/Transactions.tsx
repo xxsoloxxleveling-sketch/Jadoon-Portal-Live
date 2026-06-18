@@ -33,9 +33,10 @@ export default function Transactions() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       const [transRes, catRes] = await Promise.all([
-        fetch('/api/transactions', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/transactions/categories', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${API_URL}/api/transactions`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_URL}/api/transactions/categories`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
       if (transRes.ok) setTransactions(await transRes.json());
@@ -54,7 +55,8 @@ export default function Transactions() {
   const handleCreateTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/transactions', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${API_URL}/api/transactions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,7 +79,8 @@ export default function Transactions() {
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/transactions/categories', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${API_URL}/api/transactions/categories`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -99,7 +102,8 @@ export default function Transactions() {
   const deleteTransaction = async (id: string) => {
     if (!confirm('Are you sure you want to delete this transaction?')) return;
     try {
-      const res = await fetch(`/api/transactions/${id}`, {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${API_URL}/api/transactions/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -112,7 +116,8 @@ export default function Transactions() {
   const deleteCategory = async (id: string) => {
     if (!confirm('Are you sure you want to delete this category? Ensure no transactions are attached to it.')) return;
     try {
-      const res = await fetch(`/api/transactions/categories/${id}`, {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${API_URL}/api/transactions/categories/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -148,6 +153,31 @@ export default function Transactions() {
     t.category?.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const exportToCSV = () => {
+    const headers = ['Date', 'Title', 'Reference', 'Category', 'Type', 'Amount', 'Status'];
+    const rows = filteredTransactions.map(t => [
+      new Date(t.date).toLocaleDateString(),
+      `"${t.title.replace(/"/g, '""')}"`,
+      `"${(t.reference || t.description || '').replace(/"/g, '""')}"`,
+      `"${t.category?.name || 'Uncategorized'}"`,
+      t.type,
+      t.amount,
+      t.status
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Income_Expense_Sheet.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = () => {
+    window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/transactions/export/pdf?token=${token}`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -157,11 +187,25 @@ export default function Transactions() {
         </div>
         <div className="flex space-x-3">
           <button 
+            onClick={exportToCSV}
+            className="flex items-center space-x-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm"
+          >
+            <Download size={18} />
+            <span className="hidden md:inline">Export CSV</span>
+          </button>
+          <button 
+            onClick={exportToPDF}
+            className="flex items-center space-x-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm"
+          >
+            <Download size={18} />
+            <span className="hidden md:inline">Export PDF</span>
+          </button>
+          <button 
             onClick={() => setIsCategoryModalOpen(true)}
             className="flex items-center space-x-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm"
           >
             <Plus size={18} />
-            <span>Categories</span>
+            <span className="hidden md:inline">Categories</span>
           </button>
           <button 
             onClick={() => { resetTransactionForm(); setIsAddModalOpen(true); }}

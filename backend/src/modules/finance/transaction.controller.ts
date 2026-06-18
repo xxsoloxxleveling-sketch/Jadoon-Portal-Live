@@ -194,3 +194,76 @@ export const getTransactionInvoicePdf = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to generate PDF: ' + err.message });
   }
 };
+
+export const getTransactionsExportPdf = async (req: Request, res: Response) => {
+  try {
+    const transactions = await prisma.transaction.findMany({
+      include: { category: true, user: true },
+      orderBy: { date: 'desc' }
+    });
+
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    res.setHeader('Content-disposition', `attachment; filename=Transactions_Sheet.pdf`);
+    res.setHeader('Content-type', 'application/pdf');
+    doc.pipe(res);
+
+    if (logoBase64) {
+      try {
+        const logoBuffer = Buffer.from(logoBase64, 'base64');
+        doc.image(logoBuffer, 50, 40, { width: 60 });
+      } catch(e) {}
+    }
+
+    doc.fontSize(20).font('Helvetica-Bold').text('JADOON PUBLIC SCHOOL & COLLEGE', 120, 50, { align: 'left' });
+    doc.fontSize(14).font('Helvetica').text('Income & Expense Sheet', 120, 75, { align: 'left' });
+    
+    doc.moveTo(50, 110).lineTo(545, 110).lineWidth(2).stroke();
+    doc.moveDown(2);
+
+    let curY = 130;
+    
+    const totalIncome = transactions.filter(t => t.type === 'INCOME').reduce((a, b) => a + b.amount, 0);
+    const totalExpense = transactions.filter(t => t.type === 'EXPENSE').reduce((a, b) => a + b.amount, 0);
+    const netBalance = totalIncome - totalExpense;
+
+    doc.fontSize(12).font('Helvetica-Bold').text(`Total Income: Rs. ${totalIncome.toLocaleString()}`, 50, curY);
+    doc.text(`Total Expense: Rs. ${totalExpense.toLocaleString()}`, 250, curY);
+    doc.text(`Net Balance: Rs. ${netBalance.toLocaleString()}`, 400, curY);
+    
+    curY += 30;
+    doc.moveTo(50, curY).lineTo(545, curY).lineWidth(1).stroke();
+    curY += 15;
+
+    doc.fontSize(10).font('Helvetica-Bold');
+    doc.text('Date', 50, curY);
+    doc.text('Title', 120, curY);
+    doc.text('Category', 250, curY);
+    doc.text('Type', 360, curY);
+    doc.text('Amount', 450, curY, { width: 95, align: 'right' });
+    
+    curY += 15;
+    doc.moveTo(50, curY).lineTo(545, curY).lineWidth(0.5).stroke();
+    curY += 10;
+
+    doc.font('Helvetica');
+    transactions.forEach(t => {
+      if (curY > 750) {
+        doc.addPage();
+        curY = 50;
+      }
+      doc.text(t.date.toLocaleDateString(), 50, curY);
+      doc.text(t.title.substring(0, 20), 120, curY);
+      const cat = (t as any).category;
+      doc.text(cat ? cat.name.substring(0, 15) : 'Uncategorized', 250, curY);
+      doc.text(t.type, 360, curY);
+      doc.text(`Rs. ${t.amount.toLocaleString()}`, 450, curY, { width: 95, align: 'right' });
+      curY += 15;
+    });
+
+    doc.end();
+  } catch (error: any) {
+    console.error('Error generating transactions pdf:', error);
+    res.status(500).json({ error: 'Failed to generate PDF' });
+  }
+};
+
